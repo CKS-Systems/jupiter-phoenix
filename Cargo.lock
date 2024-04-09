@@ -2039,6 +2039,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anyhow",
+ "bincode",
  "borsh 0.9.3",
  "bytemuck",
  "jupiter",
@@ -2049,6 +2050,7 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-client",
+ "solana-program",
  "solana-sdk",
  "spl-token",
  "spl-token-swap",

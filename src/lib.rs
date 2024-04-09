@@ -8,7 +8,8 @@ use std::ops::Deref;
 use std::{collections::HashMap, mem::size_of};
 
 use jupiter_core::amm::{Amm, KeyedAccount, PartialAccount};
-use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
+use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey, sysvar::clock};
+use solana_program::clock::Clock;
 
 use jupiter::jupiter_override::Swap;
 use jupiter_core::amm::{Quote, QuoteParams, SwapAndAccountMetas, SwapParams};
@@ -94,7 +95,7 @@ impl Amm for JupiterPhoenix {
     }
 
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
-        vec![self.market_key]
+        vec![self.market_key, clock::ID]
     }
 
     fn update(&mut self, accounts_map: &HashMap<Pubkey, PartialAccount>) -> Result<()> {
@@ -102,7 +103,14 @@ impl Amm for JupiterPhoenix {
         let (header_bytes, bytes) = &market_account.data.split_at(size_of::<MarketHeader>());
         let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes).unwrap();
         let market = load_with_dispatch(&header.market_size_params, bytes)?;
-        self.ladder = market.inner.get_ladder(u64::MAX);
+
+        let clock_data = accounts_map.get(&clock::ID).unwrap();
+        let clock: Clock = bincode::deserialize(clock_data.data.as_slice())?;
+        self.ladder = market.inner.get_ladder_with_expiration(
+            u64::MAX,
+            Some(clock.slot),
+            Some(clock.unix_timestamp.try_into().unwrap())
+        );
         Ok(())
     }
 
